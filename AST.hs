@@ -1,38 +1,52 @@
 module AST where
 
 import Control.Applicative
+import Data.Char
 import Text.Read as T
 import Text.Read.Lex
-
-type Program = [Value]
+import Text.ParserCombinators.ReadP hiding (choice, (<++))
 
 data Value = Integer Integer
            | Double Double
+           | Bool Bool
            | Char Char
            | String String
            | Symbol String
-           | Quoted Program
-           deriving (Eq, Show)
+           | List [Value]
+
+instance Show Value where
+    show (Integer i) = show i
+    show (Double d) = show d
+    show (Bool b) = if b then "#t" else "#f"
+    show (AST.Char c) = show c
+    show (AST.String s) = show s
+    show (AST.Symbol s) = s
+    show (List l) = show l
+    showList l = showChar '[' . (showString . unwords . map show) l . showChar ']'
 
 instance Read Value where
-    readPrec = choice [readNumber, readChar, readString, readSymbol, readQuoted] where
-        readNumber = do
+    readPrec =
+        (do
+            Punc "[" <- lexP
+            l <- readListPrec
+            Punc "]" <- lexP
+            return (List l)
+        ) <++ (do
             Number n <- lexP
             case numberToInteger n of
                 Just i -> return (Integer i)
                 Nothing -> return $ Double $ fromRational $ numberToRational n
-        readChar = do
+        ) <++ (do
             T.Char c <- lexP
             return (AST.Char c)
-        readString = do
+        ) <++ (do
             T.String s <- lexP
             return (AST.String s)
-        readSymbol = do
-            T.Ident s <- lexP
-            return (AST.Symbol s)
-        readQuoted = do
-            Punc "[" <- lexP
-            p <- readListPrec
-            Punc "]" <- lexP
-            return (Quoted p)
-    readListPrec = liftA2 (:) readPrec readListPrec +++ pure []
+        ) <++ (do
+            s <- lift $ skipSpaces >> munch1 (\c -> not (isSpace c || c `elem` "[]"))
+            case s of
+                "#true" -> return (Bool True)
+                "#false" -> return (Bool False)
+                _ -> return (AST.Symbol s)
+        )
+    readListPrec = liftA2 (:) readPrec readListPrec <++ pure []

@@ -1,6 +1,6 @@
 import AST
+import Ni
 
 main = do
-    input <- getContents
-    program <- readIO input :: IO Program
-    print program
+    program <- getContents >>= readIO :: IO [Value]
+    run (eval program) initialContext
