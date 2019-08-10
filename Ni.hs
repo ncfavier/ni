@@ -1,4 +1,5 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Ni where
 
 import Control.Monad
@@ -25,6 +26,12 @@ instance Monad Ni where
 
 instance MonadFail Ni where
     fail = lift . F.fail
+
+instance Semigroup (Ni ()) where
+    (<>) = (>>)
+
+instance Monoid (Ni ()) where
+    mempty = pure ()
 
 lift io = Ni $ \ctx -> do
     x <- io
@@ -89,7 +96,7 @@ valueToNi (Symbol s) = Ni $ \ctx ->
         Nothing -> F.fail $ "unbound symbol `" ++ s ++ "'"
 valueToNi v = push v
 
-eval = traverse_ valueToNi
+eval = foldMap valueToNi
 
 initialContext = Context {
     stack = [],
@@ -102,7 +109,7 @@ initialContext = Context {
             a <- pop >>= getInteger
             b <- pop >>= getInteger
             push $ Integer $ a + b),
-        ("null?", peek >>= getList >>= push . Bool. null),
+        ("null?", peek >>= getList >>= push . Bool . null),
         ("if", do
             no <- pop >>= getList
             yes <- pop >>= getList
@@ -110,7 +117,7 @@ initialContext = Context {
             eval (if cond then yes else no)),
         ("pop", void pop),
         ("uncons", do
-            l <- (pop >>= getList)
+            l <- pop >>= getList
             case l of
                 v:vs -> do
                     push (List vs)
