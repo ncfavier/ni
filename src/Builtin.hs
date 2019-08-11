@@ -30,6 +30,6 @@ initialEnvironment = [
             v:vs -> do
                 push (List vs)
                 push v
-            [] -> F.fail "empty list")]
+            [] -> F.fail "Empty list.")]
 
 initialContext = Context initialStack initialEnvironment
