@@ -6,8 +6,8 @@
         f fold
     ]
     if
-] 'fold define
+] \fold define
 
-[0 [+] fold] 'add define
+[0 [+] fold] \add define
 
 [1 2 3 4 5] add print

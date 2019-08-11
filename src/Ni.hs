@@ -90,7 +90,7 @@ printValue v = lift $ do
         _ -> print v
 
 valueToNi (Symbol ('$':s)) = pop >>= bindValue s
-valueToNi (Symbol ('\'':s)) = push (Symbol s)
+valueToNi (Symbol ('\\':s)) = push (Symbol s)
 valueToNi (Symbol s) = Ni $ \ctx ->
     case lookup s (environment ctx) of
         Just n -> run n ctx
