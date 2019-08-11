@@ -1,7 +1,6 @@
 import AST
 import Ni
-import Builtin
 
 main = do
-    program <- getContents >>= readIO :: IO [Value]
+    program <- getContents >>= readIO
     run (eval program) initialContext

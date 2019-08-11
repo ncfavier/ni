@@ -1,11 +1,11 @@
-[ $f $acc
-    null?
-    [pop acc]
+[$f $acc $list
+    list null
+    [acc]
     [
-        uncons acc f eval
+        list uncons acc f eval
         f fold
     ]
-    if
+    ifelse
 ] \fold define
 
 [0 [+] fold] \add define
