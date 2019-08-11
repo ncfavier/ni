@@ -83,12 +83,6 @@ bindValue s = bind s . push
 
 define s = bind s . eval
 
-printValue v = lift $ do
-    case v of
-        String s -> putStrLn s
-        Char c -> putChar c
-        _ -> print v
-
 valueToNi (Symbol ('$':s)) = pop >>= bindValue s
 valueToNi (Symbol ('\\':s)) = push (Symbol s)
 valueToNi (Symbol s) = Ni $ \ctx ->

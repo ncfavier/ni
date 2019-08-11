@@ -6,6 +6,11 @@ import Control.Monad.Fail as F
 import AST
 import Ni
 
+printValue v = lift $ case v of
+    String s -> putStrLn s
+    Char c -> putChar c
+    _ -> print v
+
 initialStack = []
 
 initialEnvironment = [
