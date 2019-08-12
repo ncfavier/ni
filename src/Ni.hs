@@ -3,6 +3,7 @@
 module Ni where
 
 import System.Exit
+import Data.List
 import Data.Functor
 import qualified Data.Map as M
 import Control.Applicative
@@ -27,9 +28,14 @@ instance Monoid (Ni ()) where
 
 execNi = execStateT
 
-emptyStack = lift $ die "Empty stack"
-unboundSymbol s = lift $ die $ "Unbound symbol " ++ s
-notEvaluable v = lift $ die $ "Cannot eval " ++ show v
+failWithStackDump s = do
+    List l <- peekStack
+    lift $ die $ intercalate "\n" $ [s, "Stack: " ++ show l]
+
+emptyStack = failWithStackDump "Empty stack"
+unboundSymbol s = failWithStackDump $ "Unbound symbol " ++ s
+notEvaluable v = failWithStackDump $ "Cannot eval " ++ show v
+typeError s = failWithStackDump $ s ++ ": type error"
 
 push v = modify $ onStack (v:)
 
@@ -59,7 +65,7 @@ valueToNi (Symbol ('\\':s@(_:_))) = push (Symbol s)
 valueToNi (Symbol s) = do
     env <- gets environment
     case M.lookup s env of
-        Just n -> n
+        Just n -> n <|> typeError s
         Nothing -> unboundSymbol s
 valueToNi v = push v
 

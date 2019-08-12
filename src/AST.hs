@@ -22,8 +22,8 @@ instance Show Value where
     show (AST.Char c) = show c
     show (AST.String s) = show s
     show (AST.Symbol s) = s
-    show (List l) = show l
-    showList l = showChar '[' . (showString . unwords . map show) l . showChar ']'
+    show (List l) = "[" ++ showList l "" ++ "]"
+    showList l = showString $ unwords $ map show l
 
 -- TODO: parse \ and $
 instance Read Value where
