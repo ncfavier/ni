@@ -1,3 +1,4 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE BangPatterns #-}
 module Ni where
@@ -5,6 +6,8 @@ module Ni where
 import System.Exit
 import Control.Monad
 import Control.Monad.Fail as F
+import Control.Monad.Trans.State
+import Control.Monad.Trans.Class
 import Data.Foldable
 import qualified Data.Map as M
 
@@ -12,22 +15,12 @@ import AST
 
 data Context = Context { stack :: [Value], environment :: M.Map String (Ni ()) }
 
-newtype Ni a = Ni { run :: Context -> IO (Context, a) }
+onStack f (Context st env) = Context (f st) env
+onEnvironment f (Context st env) = Context st (f env)
 
-instance Functor Ni where
-    fmap f n = Ni $ (fmap . fmap) f . run n
+type Ni = StateT Context IO
 
-instance Applicative Ni where
-    pure x = Ni $ \ctx -> pure (ctx, x)
-    (<*>) = ap
-
-instance Monad Ni where
-    n >>= f = Ni $ \ctx -> do
-        (ctx', x) <- run n ctx
-        run (f x) ctx'
-
-instance MonadFail Ni where
-    fail = lift . die
+execNi = execStateT
 
 instance Semigroup (Ni ()) where
     (<>) = (>>)
@@ -35,47 +28,39 @@ instance Semigroup (Ni ()) where
 instance Monoid (Ni ()) where
     mempty = pure ()
 
-lift io = Ni $ \ctx -> do
-    x <- io
-    return (ctx, x)
-
 emptyStack = die "Empty stack."
 unboundSymbol s = die $ "Unbound symbol '" ++ s ++ "'."
 
-push !v = Ni $ \ctx ->
-    return (ctx { stack = v:stack ctx }, ())
+push !v = modify $ onStack (v:)
 
-pop = Ni $ \ctx ->
-    case stack ctx of
-        v:vs -> return (ctx { stack = vs }, v)
-        [] -> emptyStack
+withUncons f = do
+    st <- gets stack
+    case st of
+        v:vs -> f v vs
+        [] -> lift emptyStack
 
-peek = Ni $ \ctx ->
-    case stack ctx of
-        v:_ -> return (ctx, v)
-        [] -> emptyStack
+pop = withUncons $ \v vs -> do
+    modify $ onStack $ const vs
+    return v
 
-peekStack = Ni $ \ctx ->
-    return (ctx, List (stack ctx))
+peek = withUncons $ \v vs -> return v
 
-bind s !n = Ni $ \ctx ->
-    return (ctx { environment = M.insert s n (environment ctx) }, ())
+peekStack = gets (List . stack)
 
+bind s !n = modify $ onEnvironment $ M.insert s n
+unbind s = modify $ onEnvironment $ M.delete s
 bindValue s = bind s . push
-
 define s = bind s . eval
-
-unbind s = Ni $ \ctx ->
-    return (ctx { environment = M.delete s (environment ctx) }, ())
 
 valueToNi (Symbol ('$':s)) = if null s
     then void pop
     else pop >>= bindValue s
 valueToNi (Symbol ('\\':s@(_:_))) = push (Symbol s)
-valueToNi (Symbol s) = Ni $ \ctx ->
-    case M.lookup s (environment ctx) of
-        Just n -> run n ctx
-        Nothing -> unboundSymbol s
+valueToNi (Symbol s) = do
+    env <- gets environment
+    case M.lookup s env of
+        Just n -> n
+        Nothing -> lift $ unboundSymbol s
 valueToNi v = push v
 
 eval = mconcat . map valueToNi
@@ -124,6 +109,7 @@ initialEnvironment = M.fromList [
     ("printStack", peekStack >>= printValue),
     ("getChar", do c <- lift getChar; push (Char c)),
     ("getLine", do s <- lift getLine; push (String s)),
+    ("exit", do lift exitSuccess),
     -- Logic
     ("not", do Bool b <- pop; push $ Bool $ not b),
     ("and", do Bool a <- pop; Bool b <- pop; push $ Bool $ a && b),
