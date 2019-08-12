@@ -7,7 +7,7 @@ import Ni
 
 main = do
     stdlib <- readFile "src/stdlib.ni" >>= readIO
-    ctx <- execNi (eval stdlib) initialContext
+    ctx <- execNi (eval $ List stdlib) initialContext
     stdin <- getContents
     loop stdin ctx
     where

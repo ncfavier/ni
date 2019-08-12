@@ -1,26 +1,21 @@
-"Stack manipulation" $
+"Stack transformers" $
 
-[ $x $y x y ] \swap define
-[ $x x x ] \dup define
-[ $x x x x ] \trup define
+\const [ $x $y x   ] define
+\swap  [ $x $y x y ] define
+\dup   [ $x    x x ] define
 
 "Logic" $
 
-[ $yes
-    [] ifelse
-] \if define
+\if [ [] ifelse ] define
 
 "Lists" $
 
-[ $f $acc $list
+\fold [ $f $acc $list
     list null
-    [acc]
-    [
-        list uncons acc f eval
-        f fold
-    ]
+    \acc
+    [ list uncons acc f eval f fold ]
     ifelse
-] \fold define
+] define
 
-[0 [+] fold] \sum define
-[1 [*] fold] \product define
+\sum     [ 0 \+ fold ] define
+\product [ 1 \* fold ] define

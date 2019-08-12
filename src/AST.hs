@@ -25,6 +25,7 @@ instance Show Value where
     show (List l) = show l
     showList l = showChar '[' . (showString . unwords . map show) l . showChar ']'
 
+-- TODO: parse \ and $
 instance Read Value where
     readPrec = (do
             Punc "[" <- lexP
