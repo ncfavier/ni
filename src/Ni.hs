@@ -27,9 +27,9 @@ instance Monoid (Ni ()) where
 
 execNi = execStateT
 
-emptyStack = lift $ die "Empty stack."
-unboundSymbol s = lift $ die $ "Unbound symbol " ++ s ++ "."
-notEvaluable v = lift $ die $ "Cannot eval " ++ show v ++ "."
+emptyStack = lift $ die "Empty stack"
+unboundSymbol s = lift $ die $ "Unbound symbol " ++ s
+notEvaluable v = lift $ die $ "Cannot eval " ++ show v
 
 push v = modify $ onStack (v:)
 
