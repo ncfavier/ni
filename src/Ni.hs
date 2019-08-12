@@ -32,7 +32,7 @@ failWithStackDump s = do
     List l <- peekStack
     lift $ die $ intercalate "\n" $ [s, "Stack: " ++ show l]
 
-emptyStack = failWithStackDump "Empty stack"
+emptyStack = lift $ die "Empty stack"
 unboundSymbol s = failWithStackDump $ "Unbound symbol " ++ s
 notEvaluable v = failWithStackDump $ "Cannot eval " ++ show v
 typeError s = failWithStackDump $ s ++ ": type error"
