@@ -1,9 +1,8 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE FlexibleInstances #-}
 module Ni where
 
 import System.Exit
 import Data.List
+import Data.Foldable
 import Data.Functor
 import qualified Data.Map as M
 import Control.Applicative
@@ -11,72 +10,71 @@ import Control.Monad
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Class
 
-import AST
+import Base
 
-data Context = Context { stack :: [Value], environment :: M.Map String (Ni ()) }
-
-onStack f (Context st env) = Context (f st) env
-onEnvironment f (Context st env) = Context st (f env)
-
-type Ni = StateT Context IO
-
-instance Semigroup (Ni ()) where
-    (<>) = (>>)
-
-instance Monoid (Ni ()) where
-    mempty = pure ()
-
-execNi = execStateT
-
-failWithStackDump s = do
-    List l <- peekStack
-    lift $ die $ intercalate "\n" $ [s, "Stack: " ++ show l]
-
-emptyStack = lift $ die "Empty stack"
-unboundSymbol s = failWithStackDump $ "Unbound symbol " ++ s
-notEvaluable v = failWithStackDump $ "Cannot eval " ++ show v
-typeError s = failWithStackDump $ s ++ ": type error"
-
-push v = modify $ onStack (v:)
-
-withUncons f = do
-    st <- gets stack
-    case st of
-        v:vs -> f v vs
-        [] -> emptyStack
-
-pop = withUncons $ \v vs -> do
-    modify $ onStack $ const vs
-    return v
-
-peek = withUncons $ \v vs -> return v
-
-peekStack = gets (List . stack)
-
-bind s n = modify $ onEnvironment $ M.insert s n
-unbind s = modify $ onEnvironment $ M.delete s
-bindValue s = bind s . push
-define s = bind s . eval
+runNi n = void $ runStateT n defaultContext
 
 valueToNi (Symbol ('$':s)) = if null s
     then void pop
     else pop >>= bindValue s
 valueToNi (Symbol ('\\':s@(_:_))) = push (Symbol s)
 valueToNi (Symbol s) = do
-    env <- gets environment
-    case M.lookup s env of
-        Just n -> n <|> typeError s
-        Nothing -> unboundSymbol s
+    envs <- gets environments
+    case asum $ map (M.lookup s . bindings) envs of
+        Just n -> n <|> failWithStackDump ("wrong arguments for " ++ s)
+        Nothing -> failWithStackDump $ s ++ ": unbound symbol"
 valueToNi v = push v
 
 eval v@(Symbol _) = valueToNi v
 eval (List l) = mconcat $ map valueToNi l
-eval v = notEvaluable v
+eval v = failWithStackDump $ "cannot eval " ++ show v
 
-initialEnvironment = M.fromListWith (<|>) $ [
+fail' s = lift $ die $ "error: " ++ s
+
+failWithStackDump s = do
+    List l <- peekStack
+    fail' $ intercalate "\n" $ [s, "stack: " ++ if null l then "(empty)" else show l]
+
+modifyStack f = modify $ \ctx -> ctx { stack = f (stack ctx) }
+modifyEnvironments f = modify $ \ctx -> ctx { environments = f (environments ctx) }
+modifyCurrentEnvironment f = modifyEnvironments $ \(m:ms) -> f m:ms
+modifyCurrentBindings f = modifyCurrentEnvironment $ \(Environment n b) -> Environment n (f b)
+
+push v = modifyStack (v:)
+
+unconsStack f = do
+    st <- gets stack
+    case st of
+        v:vs -> f st
+        [] -> fail' "empty stack"
+
+pop  = unconsStack $ \(v:vs) -> modifyStack (const vs) >> return v
+peek = unconsStack $ \(v:vs) -> return v
+
+peekStack = gets (List . stack)
+
+pushEnv e = modifyEnvironments (e:)
+
+popEnv = do
+    envs <- gets environments
+    case envs of
+        e:es@(_:_) -> do
+            modifyEnvironments $ const es
+            return e
+        _ -> failWithStackDump "cannot unuse base environment"
+
+bind s n = modifyCurrentBindings $ M.insert s n
+unbind s = modifyCurrentBindings $ M.delete s
+bindValue s = bind s . push
+define s = bind s . eval
+
+base = M.fromListWith (flip (<|>)) $ [
     -- Meta
     ("eval", pop >>= eval),
     -- Environment
+    ("use", do VEnvironment e <- pop; pushEnv e),
+    ("unuse", do e <- popEnv; push (VEnvironment e)),
+    ("new", do String s <- pop; push $ VEnvironment $ Environment s M.empty),
     ("define", do l <- pop; Symbol s <- pop; define s l),
     ("unbind", do Symbol s <- pop; unbind s),
     -- IO
@@ -87,6 +85,8 @@ initialEnvironment = M.fromListWith (<|>) $ [
     ("getChar", do c <- lift getChar; push (Char c)),
     ("getLine", do s <- lift getLine; push (String s)),
     ("exit", do lift exitSuccess),
+    -- Equality
+    ("=", do a <- pop; b <- pop; push $ Bool $ a == b),
     -- Logic
     ("not", do Bool b <- pop; push $ Bool $ not b),
     ("and", do Bool a <- pop; Bool b <- pop; push $ Bool $ a && b),
@@ -100,10 +100,12 @@ initialEnvironment = M.fromListWith (<|>) $ [
     -- Lists and strings
     ("+", do List a <- pop; List b <- pop; push $ List $ a ++ b),
     ("+", do String a <- pop; String b <- pop; push $ String $ a ++ b),
-    ("null", do List l <- pop; push $ Bool $ null l),
-    ("null", do String s <- pop; push $ Bool $ null s),
+    ("null?", do List l <- pop; push $ Bool $ null l),
+    ("null?", do String s <- pop; push $ Bool $ null s),
     ("cons", do v <- pop; List vs <- pop; push $ List (v:vs)),
-    ("uncons", do List (v:vs) <- pop; push (List vs); push v)]
-    -- TODO: conversions
+    ("cons", do Char c <- pop; String cs <- pop; push $ String (c:cs)),
+    ("uncons", do List (v:vs) <- pop; push (List vs); push v),
+    ("uncons", do String (c:cs) <- pop; push (String cs); push (Char c))]
+    -- TODO: conversions, ordering, more math
 
-initialContext = Context [] initialEnvironment
+defaultContext = Context [] [Environment "base" base]

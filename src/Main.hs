@@ -1,19 +1,29 @@
+import System.IO
 import System.Exit
 import System.Posix.Terminal
 import System.Posix.IO
+import Control.Monad
+import Control.Monad.Trans.Class
 
-import AST
+import Base
 import Ni
 
-main = do
-    stdlib <- readFile "src/stdlib.ni" >>= readIO
-    ctx <- execNi (eval $ List stdlib) initialContext
-    stdin <- getContents
-    loop stdin ctx
-    where
-        loop s ctx = case reads s of
-            [(v, s')] -> do
-                ctx' <- execNi (valueToNi v) ctx
-                loop s' ctx'
-            [] -> return ()
-            _ -> die "Ambiguous parse."
+-- TODO: argument processing
+main = runNi $ do
+    stdlib <- lift $ readFile "src/stdlib.ni" >>= readIO
+    eval (List stdlib)
+    isTTY <- lift $ queryTerminal stdInput
+    if isTTY then do
+        lift $ do
+            putStrLn "Ni!"
+            hSetBuffering stdout NoBuffering
+        forever $ do
+            lift $ do
+                putStr ">>> "
+                done <- isEOF
+                when done $ putChar '\n' >> exitSuccess
+            l <- lift readLn
+            eval (List l)
+    else do
+        l <- lift $ getContents >>= readIO
+        eval (List l)
