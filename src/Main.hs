@@ -18,11 +18,11 @@ main = runNi $ do
             putStrLn "Ni!"
             hSetBuffering stdout NoBuffering
         forever $ do
-            lift $ do
+            l <- lift $ do
                 putStr ">>> "
                 done <- isEOF
                 when done $ putChar '\n' >> exitSuccess
-            l <- lift readLn
+                readLn
             eval (List l)
     else do
         l <- lift $ getContents >>= readIO
