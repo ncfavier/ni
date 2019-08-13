@@ -33,7 +33,7 @@ fail' s = lift $ die $ "error: " ++ s
 
 failWithStackDump s = do
     List l <- peekStack
-    fail' $ intercalate "\n" $ [s, "stack: " ++ if null l then "(empty)" else show l]
+    fail' $ intercalate "\n" [s, "stack: " ++ if null l then "(empty)" else show l]
 
 modifyStack f = modify $ \ctx -> ctx { stack = f (stack ctx) }
 modifyEnvironments f = modify $ \ctx -> ctx { environments = f (environments ctx) }

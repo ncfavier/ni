@@ -54,8 +54,8 @@
 \sum     [ 0 \+ fold ] define
 \product [ 1 \* fold ] define
 
-\any [ #false \or fold] define
-\all [ #true \and fold] define
+\any [ #false \or fold ] define
+\all [ #true \and fold ] define
 
 \concat [ [] \+ fold ] define
 
@@ -72,5 +72,3 @@
     [ a b a increment range swap cons ]
     ifelse
 ] define
-
-"TODO: reverse" $
