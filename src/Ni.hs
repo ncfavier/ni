@@ -58,10 +58,11 @@ pushEnv e = modifyEnvironments (e:)
 popEnv = do
     envs <- gets environments
     case envs of
-        e:es@(_:_) -> do
+        [] -> failWithStackDump "empty environment stack"
+        [_] -> failWithStackDump "cannot unuse base environment"
+        e:es -> do
             modifyEnvironments $ const es
             return e
-        _ -> failWithStackDump "cannot unuse base environment"
 
 bind s n = modifyCurrentBindings $ M.insert s n
 unbind s = modifyCurrentBindings $ M.delete s
