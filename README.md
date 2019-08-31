@@ -35,19 +35,17 @@ Any other symbol has the action bound to it in the topmost environment in which 
 
 The following program prints the first ten Fibonacci numbers:
 
-```
-\fib [ $n
-    0 1
-    [ $x $y x y x + ]
-    n times
-    const
-] define
+    \fib [ $n
+        0 1
+        [ $x $y x y x + ]
+        n times
+        const
+    ] define
 
-0 $i [
-    i fib print
-    i increment $i
-] 10 times
-```
+    0 $i [
+        i fib print
+        i increment $i
+    ] 10 times
 
 ## Library
 
