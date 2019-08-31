@@ -5,6 +5,7 @@ Ni is a *stack-based*, *concatenative* programming language. Here's how it works
 A **program** is a list of values.
 
 A **value** is either:
+
 - an integer: `42`,
 - a double: `3.14159`,
 - a boolean: `#true`, `#false`,
