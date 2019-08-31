@@ -123,8 +123,9 @@ main = do
                     _ -> reply $ "Unknown command: " ++ cmd
         case (command, params) of
             ("CAP", _:"ACK":_) -> do
-                sendIRC "AUTHENTICATE" ["PLAIN"] conn
-                sendIRC "AUTHENTICATE" [BS.unpack . encode . BS.pack $ intercalate "\0" [nickname, nickname, password]] conn
+                sendRaw "AUTHENTICATE PLAIN" conn
+            ("AUTHENTICATE", _) -> do
+                sendRaw ("AUTHENTICATE " ++ (BS.unpack . encode . BS.pack $ intercalate "\0" [nickname, nickname, password])) conn
             ("CAP", _:"NAK":_) -> do
                 sendIRC "CAP" ["END"] conn
                 privMsg "NickServ" (unwords ["IDENTIFY", password]) conn
