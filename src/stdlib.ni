@@ -1,3 +1,7 @@
+"Function" $
+
+\isolate [ new use eval unuse $ ] define
+
 "Stack" $
 
 \const [ $_x $   _x    ] define
