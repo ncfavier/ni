@@ -9,12 +9,12 @@ import Text.Read as T
 import Text.Read.Lex
 import Text.ParserCombinators.ReadP hiding (choice, (<++))
 
-data Value = Integer Integer
-           | Double Double
-           | Bool Bool
-           | Char Char
-           | String String
-           | Symbol String
+data Value = Integer !Integer
+           | Double !Double
+           | Bool !Bool
+           | Char !Char
+           | String !String
+           | Symbol !String
            | VEnvironment Environment
            | List [Value]
            deriving Eq
