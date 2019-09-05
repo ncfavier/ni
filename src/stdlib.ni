@@ -1,4 +1,4 @@
-"Function" $
+"Environments" $
 
 \isolate [ new use eval unuse $ ] define
 
@@ -8,9 +8,21 @@
 \swap  [ $_x $_y _x _y ] define
 \dup   [ $_x     _x _x ] define
 
-"Actions" $
+"Loops" $
 
 \times [ replicate eval ] define
+
+\while [ $action $cond
+    cond eval
+    [ action eval cond action while ]
+    []
+    ifelse
+] define
+
+\forever [ $action
+    action eval
+    action forever
+] define
 
 "Equality" $
 

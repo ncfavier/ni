@@ -17,7 +17,7 @@ A **value** is either:
 
 A program is **evaluated** by converting every value to an action and running the actions, one after another, inside a context.
 
-A **context** is a stack of values (**the stack**), and a stack of environments.
+A **context** consists of a stack of values (**the stack**) and a stack of environments.
 
 An **environment** is a map from symbols to actions.
 
