@@ -39,8 +39,10 @@ sendIRC command params conn = sendRaw (makeLine (map toUpper command) params) co
             [] -> command
             _ -> intercalate " " $ command:(init params ++ [':':last params])
 
-privMsg target message = sendIRC "PRIVMSG" [target, message]
+privmsg target message = sendIRC "PRIVMSG" [target, message]
 notice  target message = sendIRC "NOTICE"  [target, message]
+
+nickServ cmd = privmsg "NickServ" (unwords cmd)
 
 splitWordWith c l = second (dropWhile (== c)) $ break (== c) $ dropWhile (== c) l
 splitWord = splitWordWith ' '
@@ -93,7 +95,7 @@ main = do
                     "SOURCE"  -> reply "https://git.monade.li/ni"
                     _ -> return ()
             handleCommand target command = unless (nick == nickname) do
-                let reply r = privMsg (if target == nickname then nick else target) r conn
+                let reply r = privmsg (if target == nickname then nick else target) r conn
                     (cmd, rest) = splitWord command
                     args = words rest
                 case map toLower cmd of
@@ -128,15 +130,18 @@ main = do
                 sendRaw ("AUTHENTICATE " ++ (BS.unpack . encode . BS.pack $ intercalate "\0" [nickname, nickname, password])) conn
             ("CAP", _:"NAK":_) -> do
                 sendIRC "CAP" ["END"] conn
-                privMsg "NickServ" (unwords ["IDENTIFY", password]) conn
+                nickServ ["IDENTIFY", password] conn
             ("903", _) -> do
                 sendIRC "CAP" ["END"] conn
             ("904", _) -> finish
             ("906", _) -> finish
             ("432", _) -> finish
-            ("433", nick:_) -> sendIRC "NICK" [nick ++ "-"] conn
+            ("433", _:nick:_) -> sendIRC "NICK" [nick ++ "-"] conn
+            ("437", _:nick:_) -> sendIRC "NICK" [nick ++ "-"] conn
             ("PING", p:_) -> sendIRC "PONG" [p] conn
             ("001", _) -> do
+                nickServ ["RELEASE", nickname] conn
+                sendIRC "NICK" [nickname] conn
                 unless (null modes) $ sendIRC "MODE" [nickname, modes] conn
                 unless (null channels) $ sendIRC "JOIN" [channels] conn
             ("PRIVMSG", [target, '\1':ctcp]) ->

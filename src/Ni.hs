@@ -89,6 +89,8 @@ baseEnvironment = makeEnvironment "base" $
     ) ++
     [("+", do List a <- pop; List b <- pop; push $ List $ a ++ b)
     ,("+", do String a <- pop; String b <- pop; push $ String $ a ++ b)
+    ,("+", do String a <- pop; List [] <- pop; push $ String a)
+    ,("+", do List [] <- pop; String b <- pop; push $ String b)
     ,("null?", do List l <- pop; push $ Bool $ null l)
     ,("null?", do String s <- pop; push $ Bool $ null s)
     ,("cons", do v <- pop; List vs <- pop; push $ List (v:vs))
