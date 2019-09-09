@@ -1,14 +1,14 @@
-"Environments" $
+# Environments
 
 \isolate [ new use eval unuse $ ] define
 
-"Stack" $
+# Stack
 
 \const [ $_x $   _x    ] define
 \swap  [ $_x $_y _x _y ] define
 \dup   [ $_x     _x _x ] define
 
-"Loops" $
+# Loops
 
 \times [ replicate eval ] define
 
@@ -24,15 +24,15 @@
     action forever
 ] define
 
-"Equality" $
+# Equality
 
 \/= [ = not ] define
 
-"Logic" $
+# Logic
 
 \if [ [] ifelse ] define
 
-"Math" $
+# Math
 
 \subtract [ swap - ] define
 \divide   [ swap / ] define
@@ -44,7 +44,7 @@
 \half [ 2 divide ] define
 \square [ 2 power ] define
 
-"Lists" $
+# Lists
 
 \head [ uncons const ] define
 \tail [ uncons $ ] define
@@ -70,8 +70,8 @@
 \sum     [ 0 \+ fold ] define
 \product [ 1 \* fold ] define
 
-\any [ #false \or fold ] define
-\all [ #true \and fold ] define
+\any [ :false \or fold ] define
+\all [ :true \and fold ] define
 
 \concat [ [] \+ fold ] define
 

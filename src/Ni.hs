@@ -10,6 +10,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Class
+import Control.Exception
 
 import Base
 
@@ -33,13 +34,15 @@ modifyEnvironments f = modify $ \ctx -> ctx { environments = f (environments ctx
 modifyCurrentEnvironment f = modifyEnvironments $ \(m:ms) -> f m:ms
 modifyCurrentBindings f = modifyCurrentEnvironment $ \(Environment n b) -> Environment n (f b)
 
-push v = modifyStack (v:)
+push v = do
+    v' <- lift $ evaluate v
+    modifyStack (v':)
 
 unconsStack f = do
     st <- gets stack
     case st of
-        v:vs -> f st
         [] -> fail "empty stack"
+        _ -> f st
 
 pop  = unconsStack $ \(v:vs) -> modifyStack (const vs) >> return v
 peek = unconsStack $ \(v:vs) -> return v

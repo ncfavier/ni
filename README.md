@@ -8,7 +8,7 @@ A **value** is either:
 
 - an integer: `42`,
 - a double: `3.14159`,
-- a boolean: `#true`, `#false`,
+- a boolean: `:true`, `:false`,
 - a character: `'c'`,
 - a string: `"Hello, World!"`,
 - a symbol: `foo`, `!@#&*`,
@@ -63,7 +63,7 @@ Unless otherwise specified, `b a`**`f`** means that `f` pops `a` from the stack,
 - **`unuse`** pops an environment from the stack of environments and pushes it onto the stack.
 - `b a`**`=`** and `b a`**`/=`** are the usual equality and inequality functions, respectively. Equality is defined trivially on all values except environments: two environments are equal if they have the same name.
 - `a`**`not`**, `b a`**`and`** and `b a`**`or`** are the usual boolean operations.
-- `cond yes no`**`ifelse`** evaluates `yes` if `cond` is `#true`, else `no`.
+- `cond yes no`**`ifelse`** evaluates `yes` if `cond` is `:true`, else `no`.
 - `b a`**`+`**, `b a`**`-`**, `b a`**`*`**, `b a`**`/`** and `b a`**`^`** are the usual addition, subtraction, multiplication, division and exponentiation operations, respectively, defined on both integers and doubles. **`+`** is also concatenation on strings and lists.
 - `a`**`null?`** tests whether `a` is the empty string or list.
 - `vs v`**`cons`** appends `v` to the list or string `vs`.
@@ -83,7 +83,11 @@ The file [`src/stdlib.ni`](https://git.monade.li/ni/tree/src/stdlib.ni) is evalu
 
 ## Parsing
 
-Integer, double, character and string literals are parsed as Haskell literals.
+Comments are introduced with `#`, and extend to the end of the line.
+
+Numbers are parsed as an optional plus or minus sign, a (possibly empty) integer part, optionally followed by a dot and a (possibly empty) fractional part. One of the integer part or the fractional part must be non-empty. If a dot is present, the number is a Double, otherwise it is an Integer.
+
+Character and string literals are parsed as Haskell literals.
 
 Symbols are any sequence of non-whitespace, non-`[]` characters that fail to parse as any other type of value.
 
