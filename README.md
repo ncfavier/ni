@@ -1,4 +1,4 @@
-# ni (a <> b) == ni a <> ni b
+# `ni (a <> b) == ni a <> ni b`
 
 Ni is a *stack-based*, *concatenative* programming language. Here's how it works:
 
