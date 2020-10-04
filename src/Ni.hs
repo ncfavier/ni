@@ -14,9 +14,8 @@ import Control.Exception
 
 import Base
 
-valueToNi (Symbol ('$':s)) = if null s
-    then void pop
-    else pop >>= bindValue s
+valueToNi (Symbol "$") = void pop
+valueToNi (Symbol ('$':s)) = pop >>= bindValue s
 valueToNi (Symbol ('\\':s@(_:_))) = push (Symbol s)
 valueToNi (Symbol s) = do
     envs <- gets environments
@@ -68,6 +67,7 @@ define s = bind s . eval
 makeEnvironment n l = Environment n (M.fromListWith (flip (<|>)) l)
 
 -- TODO: conversions, ordering, more math
+-- TODO: build primitives from [NiType]
 baseEnvironment = makeEnvironment "base" $
     [("eval", pop >>= eval)
     ,("define", do l <- pop; Symbol s <- pop; define s l)

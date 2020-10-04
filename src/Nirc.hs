@@ -146,9 +146,8 @@ main = do
                 unless (null channels) $ sendIRC "JOIN" [channels] conn
             ("PRIVMSG", [target, '\1':ctcp]) ->
                 handleCTCP (dropWhileEnd (== '\1') ctcp)
-            ("PRIVMSG", [target, message]) | target == nickname ->
-                handleCommand target message
             ("PRIVMSG", [target, message])
+                | target == nickname -> handleCommand target message
                 | Just command <- msum $ map (`stripPrefix` message) [prefix, nickname ++ ":", nickname ++ ","] ->
                     handleCommand target command
             _ -> return ()
