@@ -61,7 +61,7 @@ parseIRC l = (prefix, map toUpper command, params) where
 initialContext = Context [] [baseEnvironment]
 
 main = do
-    server   <- getEnvString "NIRC_SERVER"   "chat.freenode.net"
+    server   <- getEnvString "NIRC_SERVER"   "irc.libera.chat"
     port     <- getEnvInt    "NIRC_PORT"     6697
     useTLS   <- getEnvBool   "NIRC_USE_TLS"  True
     nickname <- getEnvString "NIRC_NICKNAME" "nirc"
