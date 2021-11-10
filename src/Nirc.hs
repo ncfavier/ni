@@ -44,21 +44,23 @@ notice  target message = sendIRC "NOTICE"  [target, message]
 
 nickServ cmd = privmsg "NickServ" (unwords cmd)
 
-splitWordWith c l = second (dropWhile (== c)) $ break (== c) $ dropWhile (== c) l
-splitWord = splitWordWith ' '
+splitWordOn c l = second (dropWhile (== c)) $ break (== c) $ dropWhile (== c) l
+splitWord = splitWordOn ' '
 
 splitParams "" = []
 splitParams (':':p) = [p]
 splitParams ps = p:splitParams rest where
     (p, rest) = splitWord ps
 
-parseIRC l = (prefix, map toUpper command, params) where
+parseIRC l = (nick, user, host, map toUpper command, params) where
     (prefix, rest) = case l of
         ':':r -> splitWord r
         _     -> ("", l)
+    (nick, (user, host)) = second (splitWordOn '@') $ splitWordOn '!' prefix
     (command, params) = second splitParams $ splitWord rest
 
 initialContext = Context [] [baseEnvironment]
+timeLimit = 5 -- seconds
 
 main = do
     server   <- getEnvString "NIRC_SERVER"   "irc.libera.chat"
@@ -81,48 +83,47 @@ main = do
     let finish = do
             connectionClose conn
             exitSuccess
+        handleCTCP nick ctcp = do
+            let (command, params) = first (map toUpper) $ splitWord ctcp
+                reply r = notice nick ("\1" ++ command ++ " " ++ r ++ "\1") conn
+            case command of
+                "PING"    -> reply params
+                "VERSION" -> reply "nirc (https://git.monade.li/ni)"
+                "SOURCE"  -> reply "https://git.monade.li/ni"
+                _ -> return ()
+        handleCommand nick target command = unless (nick == nickname) do
+            let reply r = privmsg (if target == nickname then nick else target) r conn
+                (cmd, rest) = splitWord command
+                args = words rest
+            case map toLower cmd of
+                "help" -> reply case args of
+                    [] -> "I am nirc, the Ni bot (https://git.monade.li/ni). Available commands: " ++ intercalate ", " ["help", "ni", prefix, prefix ++ "*"]
+                    "help":_ -> "help [command] -- prints a help message"
+                    "ni":_ -> "ni -- Ni!"
+                    c:_ | c == prefix -> prefix ++ " code -- run Ni code and print the resulting top value"
+                        | c == prefix ++ "*" -> prefix ++ "*" ++ " code -- run Ni code and print the resulting stack"
+                        | otherwise -> "Unknown command: " ++ c
+                "ni" -> reply "Ni!"
+                c | c `elem` [prefix, prefix ++ "*"] -> do
+                    case List <$> readMaybe rest of
+                        Just p -> do
+                            result <- tryIOError $ timeout (timeLimit * 1000000) $ execStateT (stdlib <> eval p) initialContext
+                            reply case result of
+                                Left e -> "Error: " ++ ioeGetErrorString e
+                                Right Nothing -> "Timed out"
+                                Right (Just (Context [] _)) -> "(empty)"
+                                Right (Just (Context st _)) -> dropWhile (== '\1')
+                                    if c == prefix ++ "*" then show st
+                                    else case st of
+                                        Char c:_ -> [c]
+                                        String s:_ -> s
+                                        v:_ -> show v
+                        Nothing -> reply "Parse error"
+                _ -> reply $ "Unknown command: " ++ cmd
     forever do
         line <- onEOF finish $ BS.unpack . fst . BS.spanEnd (== '\r') <$> connectionGetLine 4096 conn
         putStrLn $ "--> " ++ line
-        let (sender, command, params) = parseIRC line
-            ((nick, user), host) = first (splitWordWith '!') $ splitWordWith '@' sender
-            handleCTCP ctcp = do
-                let (command, params) = first (map toUpper) $ splitWord ctcp
-                    reply r = notice nick ("\1" ++ command ++ " " ++ r ++ "\1") conn
-                case command of
-                    "PING"    -> reply params
-                    "VERSION" -> reply "nirc (https://git.monade.li/ni)"
-                    "SOURCE"  -> reply "https://git.monade.li/ni"
-                    _ -> return ()
-            handleCommand target command = unless (nick == nickname) do
-                let reply r = privmsg (if target == nickname then nick else target) r conn
-                    (cmd, rest) = splitWord command
-                    args = words rest
-                case map toLower cmd of
-                    "help" -> reply case args of
-                        [] -> "I am nirc, the Ni bot (https://git.monade.li/ni). Available commands: " ++ intercalate ", " ["help", "ni", prefix, prefix ++ "*"]
-                        "help":_ -> "help [command] -- prints a help message"
-                        "ni":_ -> "ni -- Ni!"
-                        c:_ | c == prefix -> prefix ++ " code -- run Ni code and print the resulting top value"
-                            | c == prefix ++ "*" -> prefix ++ "*" ++ " code -- run Ni code and print the resulting stack"
-                            | otherwise -> "Unknown command: " ++ c
-                    "ni" -> reply "Ni!"
-                    c | c `elem` [prefix, prefix ++ "*"] -> do
-                        case List <$> readMaybe rest of
-                            Just p -> do
-                                result <- tryIOError $ timeout 1000000 $ execStateT (stdlib <> eval p) initialContext
-                                reply case result of
-                                    Left e -> "Error: " ++ ioeGetErrorString e
-                                    Right Nothing -> "Timed out"
-                                    Right (Just (Context [] _)) -> "(empty)"
-                                    Right (Just (Context st _)) -> dropWhile (== '\1')
-                                        if c == prefix ++ "*" then show st
-                                        else case st of
-                                            Char c:_ -> [c]
-                                            String s:_ -> s
-                                            v:_ -> show v
-                            Nothing -> reply "Parse error"
-                    _ -> reply $ "Unknown command: " ++ cmd
+        let (nick, _user, _host, command, params) = parseIRC line
         case (command, params) of
             ("CAP", _:"ACK":_) -> do
                 sendRaw "AUTHENTICATE PLAIN" conn
@@ -136,20 +137,19 @@ main = do
             ("904", _) -> finish
             ("906", _) -> finish
             ("432", _) -> finish
-            ("433", _:nick:_) -> sendIRC "NICK" [nick ++ "-"] conn
-            ("437", _:nick:_) -> sendIRC "NICK" [nick ++ "-"] conn
+            ("433", _:taken:_) -> sendIRC "NICK" [taken ++ "-"] conn
+            ("436", _:taken:_) -> sendIRC "NICK" [taken ++ "-"] conn
             ("PING", p:_) -> sendIRC "PONG" [p] conn
             ("001", _) -> do
-                nickServ ["RELEASE", nickname] conn
-                sendIRC "NICK" [nickname] conn
+                nickServ ["REGAIN", nickname] conn
                 unless (null modes) $ sendIRC "MODE" [nickname, modes] conn
                 unless (null channels) $ sendIRC "JOIN" [channels] conn
             ("PRIVMSG", [target, '\1':ctcp]) ->
-                handleCTCP (dropWhileEnd (== '\1') ctcp)
+                handleCTCP nick (dropWhileEnd (== '\1') ctcp)
             ("PRIVMSG", [target, message])
-                | target == nickname -> handleCommand target message
+                | target == nickname -> handleCommand nick target message
                 | Just command <- msum $ map (`stripPrefix` message) [prefix, nickname ++ ":", nickname ++ ","] ->
-                    handleCommand target command
+                    handleCommand nick target command
             _ -> return ()
     where
     getEnvString n d = fromMaybe d <$> lookupEnv n
