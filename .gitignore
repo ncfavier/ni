@@ -1,3 +1,5 @@
 dist*
 .ghc.*
 config.*
+result
+env
