@@ -1,5 +1,6 @@
 # Environments
 
+# TODO isolate the stack to build lists
 \isolate [ new use eval unuse $ ] define
 
 # Stack

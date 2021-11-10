@@ -66,7 +66,7 @@ define s = bind s . eval
 
 makeEnvironment n l = Environment n (M.fromListWith (flip (<|>)) l)
 
--- TODO: conversions, ordering, more math
+-- TODO: conversions, more math
 -- TODO: build primitives from [NiType]
 baseEnvironment = makeEnvironment "base" $
     [("eval", pop >>= eval)
@@ -81,7 +81,13 @@ baseEnvironment = makeEnvironment "base" $
     ,("or", do Bool a <- pop; Bool b <- pop; push $ Bool $ a || b)
     ,("ifelse", do no <- pop; yes <- pop; Bool cond <- pop; eval (if cond then yes else no))
     ] ++ (
-    [("+", (+)), ("-", (-)), ("*", (*)), ("/", div), ("^", (^))] <&> \(s, f) ->
+    [("<", (<)), ("<=", (<=)), (">", (>)), (">=", (>=))] <&> \(s, f) ->
+        (s, do Integer a <- pop; Integer b <- pop; push $ Bool $ f a b)
+    ) ++ (
+    [("<", (<)), ("<=", (<=)), (">", (>)), (">=", (>=))] <&> \(s, f) ->
+        (s, do Double a <- pop; Double b <- pop; push $ Bool $ f a b)
+    ) ++ (
+    [("+", (+)), ("-", (-)), ("*", (*)), ("/", div), ("%", mod), ("^", (^))] <&> \(s, f) ->
         (s, do Integer a <- pop; Integer b <- pop; push $ Integer $ f a b)
     ) ++ (
     [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("^", (**))] <&> \(s, f) ->

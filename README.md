@@ -64,7 +64,7 @@ Unless otherwise specified, `b a`**`f`** means that `f` pops `a` from the stack,
 - `b a`**`=`** and `b a`**`/=`** are the usual equality and inequality functions, respectively. Equality is defined trivially on all values except environments: two environments are equal if they have the same name.
 - `a`**`not`**, `b a`**`and`** and `b a`**`or`** are the usual boolean operations.
 - `cond yes no`**`ifelse`** evaluates `yes` if `cond` is `:true`, else `no`.
-- `b a`**`+`**, `b a`**`-`**, `b a`**`*`**, `b a`**`/`** and `b a`**`^`** are the usual addition, subtraction, multiplication, division and exponentiation operations, respectively, defined on both integers and doubles. **`+`** is also concatenation on strings and lists.
+- `b a`**`+`**, `b a`**`-`**, `b a`**`*`**, `b a`**`/`**, `b a`**`%`** and `b a`**`^`** are the usual addition, subtraction, multiplication, division, modulo and exponentiation operations, respectively, defined on both integers and doubles. **`+`** is also concatenation on strings and lists.
 - `a`**`null?`** tests whether `a` is the empty string or list.
 - `vs v`**`cons`** appends `v` to the list or string `vs`.
 - `vs`**`uncons`** breaks the list or string `vs` into its head and its tail, pushes its tail onto the stack, then pushes its head onto the stack.
