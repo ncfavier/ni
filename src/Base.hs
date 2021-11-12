@@ -23,17 +23,14 @@ data Value = Integer !Integer
            | List [Value]
            deriving Eq
 
-data Environment = Environment { name :: String, bindings :: M.Map String (Ni ()) }
+data Environment = Environment { name :: String, bindings :: M.Map String Ni }
 
 data Context = Context { stack :: [Value], environments :: [Environment] }
 
-type Ni = StateT Context IO
+type Ni = StateT Context IO ()
 
-instance Semigroup (Ni ()) where
-    (<>) = (>>)
-
-instance Monoid (Ni ()) where
-    mempty = pure ()
+instance Semigroup Ni where (<>) = (>>)
+instance Monoid    Ni where mempty = pure ()
 
 instance Show Value where
     showsPrec _ (Integer n) = shows n
