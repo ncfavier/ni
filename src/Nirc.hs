@@ -128,7 +128,7 @@ main = do
             ("CAP", _:"ACK":_) -> do
                 sendRaw "AUTHENTICATE PLAIN" conn
             ("AUTHENTICATE", _) -> do
-                sendRaw ("AUTHENTICATE " ++ (BS.unpack . encode . BS.pack $ intercalate "\0" [nickname, nickname, password])) conn
+                sendRaw ("AUTHENTICATE " ++ (BS.unpack . encode . BS.pack $ intercalate "\0" ["", nickname, password])) conn
             ("CAP", _:"NAK":_) -> do
                 sendIRC "CAP" ["END"] conn
                 nickServ ["IDENTIFY", password] conn
